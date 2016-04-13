@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html ng-app="liniuszek">
+    <head>
+        <title>TODO supply a title</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <!-- process:[href]:dist //maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css -->
+        <link rel="stylesheet" href="bower_components/bootstrap-css-only/css/bootstrap.min.css">
+        <!-- /build -->
+        <!-- process:[href]:dist //cdnjs.cloudflare.com/ajax/libs/angular-bootstrap-colorpicker/3.0.25/css/colorpicker.min.css -->
+        <link rel="stylesheet" href="bower_components/angular-bootstrap-colorpicker/css/colorpicker.min.css">
+        <!-- /build -->
+
+        <!-- build:css({public_html,.tmp}) styles/main.css -->
+        <link rel="stylesheet" href="liniuszek.css">
+        <!-- endbuild -->
+        
+        <!-- process:[src]:dist //cdnjs.cloudflare.com/ajax/libs/jspdf/1.2.61/jspdf.min.js -->
+        <script type="text/javascript" src="bower_components/jspdf/dist/jspdf.min.js"></script>
+        <!-- /process -->
+        <!-- process:[src]:dist //cdnjs.cloudflare.com/ajax/libs/jquery/2.2.3/jquery.min.js -->
+        <script type="text/javascript" src="bower_components/jquery/dist/jquery.min.js"></script>
+        <!-- /process -->
+        <!-- process:[src]:dist //cdnjs.cloudflare.com/ajax/libs/angular.js/1.5.3/angular.min.js -->
+        <script type="text/javascript" src="bower_components/angular/angular.min.js"></script>
+        <!-- /process -->
+        <!-- process:[src]:dist //cdnjs.cloudflare.com/ajax/libs/angular-ui-bootstrap/1.3.1/ui-bootstrap-tpls.min.js -->
+        <script type="text/javascript" src="bower_components/angular-ui-bootstrap-bower/ui-bootstrap-tpls.min.js"></script>
+        <!-- /process -->
+        <!-- process:[src]:dist //cdnjs.cloudflare.com/ajax/libs/angular-bootstrap-colorpicker/3.0.25/js/bootstrap-colorpicker-module.min.js -->
+        <script type="text/javascript" src="bower_components/angular-bootstrap-colorpicker/js/bootstrap-colorpicker-module.min.js"></script>
+        <!-- /process -->
+
+        <!-- build:js({public_html,.tmp}) scripts/scripts.js -->        
+        <script type="text/javascript" src="liniuszek.js"></script>
+        <!-- endbuild -->        
+    </head>
+    <body ng-controller="mainController">
+        <div class="container-fluid">
+            <div class="row-fluid">
+                <div class="col-lg-6">
+                    <form class="form-horizontal">
+                        <fieldset>
+                            <legend>Paper</legend>
+                            <div class="form-group">
+                                <label class="col-xs-2 control-label">Size</label>
+                                <div class="col-xs-4">
+                                    <select ng-model="view.paperSize" ng-options="paperSize.label for paperSize in view.paperSizes" class="form-control"></select>
+                                </div>
+                                <label class="col-xs-2 control-label">Orientation</label>
+                                <div class="col-xs-4">
+                                    <select ng-model="view.paperOrientation" ng-options="paperOrientation.label for paperOrientation in view.paperOrientations" class="form-control"></select>
+                                </div>
+                            </div>
+                            <div class="form-group" >
+                                <label class="col-xs-2 control-label">Width</label>
+                                <div class="col-xs-4">
+                                    <div class="input-group">
+                                        <input type="number" min="0" 
+                                               ng-model="view.paperSize.width" 
+                                               ng-disabled="view.paperSize.value !== 'other'" 
+                                               class="form-control"/>
+                                        <div class="input-group-addon">mm</div>
+                                    </div>
+                                </div>
+                                <label class="col-xs-2 control-label">Height</label>
+                                <div class="col-xs-4">
+                                    <div class="input-group">
+                                        <input type="number"  min="0"
+                                               ng-model="view.paperSize.height"
+                                               ng-disabled="view.paperSize.value !== 'other'" 
+                                               class="form-control"/>
+                                        <div class="input-group-addon">mm</div>
+                                    </div>
+                                </div>
+                            </div>                            
+                        </fieldset>
+                        <fieldset>
+                            <legend>Layout <a ng-click="practice()">Practice</a> <a ng-click="single()">Single</a> <a ng-click="verso()">Verso</a> <a ng-click="recto()">Recto</a> <a ng-click="twoColumnsNinths()">Two</a></legend>
+                            <div class="form-group">
+                                <label class="col-xs-2 control-label">Margins</label>
+                                <label class="col-xs-1 col-xs-offset-3 control-label">Top</label>
+                                <div class="col-xs-3">
+                                    <div class="input-group">
+                                        <input type="number" step=".1" min="0"
+                                               ng-model="view.page.topMargin" class="form-control">
+                                        <div class="input-group-addon">mm</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="col-xs-1 col-xs-offset-2 control-label">Left</label>
+                                <div class="col-xs-3">
+                                    <div class="input-group">
+                                        <input type="number" step=".1" min="0"
+                                               ng-model="view.page.leftMargin" class="form-control">
+                                        <div class="input-group-addon">mm</div>
+                                    </div>
+                                </div>
+                                <label class="col-xs-1 col-xs-offset-2 control-label">Right</label>
+                                <div class="col-xs-3">
+                                    <div class="input-group">
+                                        <input type="number" step=".1" min="0"
+                                               ng-model="view.page.rightMargin" class="form-control">
+                                        <div class="input-group-addon">mm</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="col-xs-1 col-xs-offset-5 control-label">Bottom</label>
+                                <div class="col-xs-3">
+                                    <div class="input-group">
+                                        <input type="number" step=".1" min="0"
+                                               ng-model="view.page.bottomMargin" 
+                                               class="form-control">
+                                        <div class="input-group-addon">mm</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="col-xs-2 control-label">Columns</label>
+                                <div class="col-xs-4">
+                                    <input type="number" min="1"
+                                           ng-model="view.page.columns" 
+                                           class="form-control">
+                                </div>
+                                <label class="col-xs-2 control-label">Distance</label>
+                                <div class="col-xs-4">
+                                    <div class="input-group">
+                                        <input type="number" step=".1" ng-model="view.page.interColumn" ng-disabled="view.page.columns <= 1" class="form-control">
+                                        <div class="input-group-addon">mm</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </fieldset>
+                        <fieldset>
+                            <legend>Guidelines</legend>
+                            <div class="form-group">
+                                <label class="col-xs-2 control-label">Nib width</label>
+                                <div class="col-xs-10">
+                                    <div class="input-group">
+                                        <input type="number" step=".1" ng-model="view.nibWidth" class="form-control">
+                                        <div class="input-group-addon">mm</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="col-xs-2 control-label">Lines</label>
+                                <div class="col-xs-10">
+                                    <table class="table table-striped">
+                                        <thead>
+                                            <tr>
+                                                <th>Position</th>
+                                                <th>Style</th>
+                                                <th>Color</th>
+                                                <th><a class="text-primary" ng-click="addLine()">Add</a></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr ng-repeat="line in view.guideLines| orderBy: '-position'">
+                                                <td ng-switch="Math.sign(line.position)">
+                                                    <span ng-switch-when="-1">{{Math.abs(line.position)}} below baseline.</span>
+                                                    <span ng-switch-when="0">Baseline</span>
+                                                    <span ng-switch-when="1">{{Math.abs(line.position)}} above baseline.</span>
+                                                </td>
+                                                <td>
+                                                    <span ng-switch="line.style">
+                                                        <span ng-switch-when="dotted">Dotted</span>
+                                                        <span ng-switch-when="dashed">Dashed</span>
+                                                        <span ng-switch-default>Plain</span>
+                                                    </span>
+                                                    {{line.lineWidth}} mm wide.
+                                                </td>
+                                                <td>
+                                                    <span ng-style="{'color':line.color}">{{line.color|| '#000000'}}</span>
+                                                </td>
+                                                <td>
+                                                    <a class="text-info" ng-click="editLine(line)"><i class="glyphicon glyphicon-edit"></i></a>
+                                                    <a class="text-danger" ng-show="line.position !== 0" ng-click="removeLine(line)"><i class="glyphicon glyphicon-remove"></i></a>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </fieldset>
+                        <fieldset>
+                            <legend>Slant guides</legend>
+                            <div class="form-group">
+                                <label class="col-xs-2 control-label">Enabled</label>
+                                <div class="col-xs-2">
+                                    <div class="checkbox">
+                                        <input type="checkbox" ng-model="view.slantGuide.enabled">
+                                    </div>
+                                </div>
+                                <label class="col-xs-2 col-xs-offset-2 control-label">Angle</label>
+                                <div class="col-xs-4">
+                                    <div class="input-group">
+                                        <input class="form-control" type="number" step=".1" placeholder="angle" ng-model="view.slantGuide.angle">
+                                        <div class="input-group-addon">&deg;</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="col-xs-2 control-label">Line width</label>
+                                <div class="col-xs-4">
+                                    <div class="input-group">
+                                        <input class="form-control" type="number" step=".05" placeholder="line width" ng-model="view.slantGuide.lineWidth">
+                                        <div class="input-group-addon">mm</div>
+                                    </div>
+                                </div>
+                                <label class="col-xs-2 control-label">Color</label>
+                                <div class="col-xs-4">
+                                    <input class="form-control" colorpicker="hex" type="text" placeholder="color" ng-model="view.slantGuide.color">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="col-xs-2 control-label">Distance</label>
+                                <div class="col-xs-4">
+                                    <div class="input-group">
+                                        <input class="form-control" type="number" step=".5" ng-model="view.slantGuide.distance">
+                                        <div class="input-group-addon">nibs</div>
+                                    </div>
+                                </div>
+                                <label class="col-xs-2 control-label">Distance type</label>
+                                <div class="col-xs-4">
+                                    <select ng-model="view.slantGuide.distanceType" ng-options="distanceType.label for distanceType in view.distanceTypes" class="form-control"></select>
+                                </div>
+                            </div>
+                        </fieldset>
+                        <fieldset>
+                            <legend>Nib angle guides</legend>
+                            <div class="form-group">
+                                <label class="col-xs-2 control-label">Enabled</label>
+                                <div class="col-xs-2">
+                                    <div class="checkbox">
+                                        <input type="checkbox" ng-model="view.nibAngleGuide.enabled">
+                                    </div>
+                                </div>
+                                <label class="col-xs-2 col-xs-offset-2 control-label">Angle</label>
+                                <div class="col-xs-4">
+                                    <div class="input-group">
+                                        <input class="form-control" type="number" step=".1" placeholder="angle" ng-model="view.nibAngleGuide.angle">
+                                        <div class="input-group-addon">&deg;</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="col-xs-2 control-label">Line width</label>
+                                <div class="col-xs-4">
+                                    <div class="input-group">
+                                        <input class="form-control" type="number" step=".05" placeholder="line width" ng-model="view.nibAngleGuide.lineWidth">
+                                        <div class="input-group-addon">mm</div>
+                                    </div>
+                                </div>
+                                <label class="col-xs-2 control-label">Color</label>
+                                <div class="col-xs-4">
+                                    <input class="form-control" colorpicker="hex" type="text" placeholder="color" ng-model="view.nibAngleGuide.color">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="col-xs-2 control-label">Distance</label>
+                                <div class="col-xs-4">
+                                    <div class="input-group">
+                                        <input class="form-control" type="number" step=".5" ng-model="view.nibAngleGuide.distance">
+                                        <div class="input-group-addon">nibs</div>
+                                    </div>
+                                </div>
+                                <label class="col-xs-2 control-label">Distance type</label>
+                                <div class="col-xs-4">
+                                    <select ng-model="view.nibAngleGuide.distanceType" ng-options="distanceType.label for distanceType in view.distanceTypes" class="form-control"></select>
+                                </div>
+                            </div>
+                        </fieldset>
+                        <div class="form-group">
+                            <div class="col-xs-10 col-xs-offset-2">
+                                <button ng-click="draw()" class="btn btn-default">Draw</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="col-lg-6">
+                    <iframe id="pdfPreview" class="pdf-preview"></iframe>
+                </div>
+            </div>
+        </div>
+    </body>
+</html>
