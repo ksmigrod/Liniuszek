@@ -587,7 +587,12 @@
         };
     }
 
+    function cleanup($document) {
+        $document.find("body > :not(.colorpicker, .liniuszek)").remove();
+    }
+
     angular.module('liniuszek', ['ui.bootstrap', 'colorpicker.module'])
             .controller('mainController', mainController)
-            .controller('lineEditModalController', lineEditModalController);
+            .controller('lineEditModalController', lineEditModalController)
+            .run(cleanup);
 })();
