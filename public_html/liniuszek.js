@@ -1,42 +1,65 @@
 (function () {
     'use strict';
-    
+
     /**
      * @typedef {LinesProperties} Properties of line
-     * @type {Object}
-     * @property {Number} maxHeight Position of highest line above baseline
-     * @property {Number} minHeight Position of lowest line belowe baseline
-     * @property {Number} height Difference between maxHeight and minHeight
+     * @type {object}
+     * @property {number} maxHeight Position of highest line above baseline
+     * @property {number} minHeight Position of lowest line belowe baseline
+     * @property {number} height Difference between maxHeight and minHeight
      */
 
-     /**
-      * @typedef {GuideLine} single line in guidelines set
-      * @type {Object}
-      * @property {Number} position Height above or below baseline.
-      * @property {Number} lineWidth Width of line
-      * @property {String} style Name of line style (plain, dashed, dotted)
-      * @property {String} color Hex color value of line
-      */
-     
     /**
-     * @typedef {AngleLine} line at angle.
-     * @type {Object}
-     * @property {Number} angle angle of line.
-     * @property {Number} lineWidth Width of line
-     * @property {String} color Hex color value of line
-     * @property {Number} distance distance between adjectent lines
-     * @property {String} distanceType 'parallel' or 'horizontal'
+     * @typedef {GuideLine} Single line in guidelines set
+     * @type {object}
+     * @property {number} position Height above or below baseline.
+     * @property {number} lineWidth Width of line
+     * @property {string} style Name of line style (plain, dashed, dotted)
+     * @property {string} color Hex color value of line
      */
 
-     /*
-      *             slantLine: {
-                angle: 5,
-                lineWidth: .2,
-                color: '#000000',
-                distance: 2.5,
-                distanceType: 'parallel'
-            },
-      */
+    /**
+     * @typedef {AngleLine} line at angle
+     * @type {object}
+     * @property {number} angle angle of line.
+     * @property {boolean} toVertical angle is measured from vertical
+     * @property {number} lineWidth Width of line
+     * @property {string} color Hex color value of line
+     * @property {number} distance distance between adjectent lines
+     * @property {string} distanceType 'parallel' or 'horizontal'
+     */
+
+    /**
+     * @typedef {ColumnDescription} description of colum of guidelines
+     * @property {number} bottom Bottom of column
+     * @property {number} top Top of column
+     * @property {number} left Left of column
+     * @property {number} right Right of column
+     */
+
+    /**
+     * @typedef {TemporaryData} temporary data
+     * @type {object}
+     * @property {string} currentColor color set.
+     * @property {LinesProperties} linesProperties calculated properties columns
+     */
+
+    /**
+     * @typedef {PageDescription} description of page format
+     * @type {object}
+     * @property {string|number[2]} format format name or page dimentions in mm
+     * @property {string} layout 'P' for portrait, 'L' for landscape
+     */
+
+    /**
+     * @typedef {ModelDescription} model descriptions
+     * @type {object}
+     * @property {PageDescription} page paper format
+     * @property {ColumnDescription[]} columns columns on page
+     * @property {GuideLine[]} linesModel description of set of guidelines
+     * @property {(AngleLine|boolean)} nibAngleLine nib angle model
+     * @property {(AngleLine|boolean)} slantLine slant model
+     */
 
     /**
      * For given lineset it calculates its height, minimal and maximal height.
@@ -61,12 +84,12 @@
     /**
      * Draws dashed horizontal lines.
      * 
-     * @param {type} pdf jsPDF object
-     * @param {Number} dx X coordinate of left point in line
-     * @param {Number} dy Y coordinate of line
-     * @param {Number} lenght Length of line
-     * @param {Number} dash Length of dark segment
-     * @param {Number} space Length of light segment
+     * @param {object} pdf jsPDF object
+     * @param {number} dx X coordinate of left point in line
+     * @param {number} dy Y coordinate of line
+     * @param {number} lenght Length of line
+     * @param {number} dash Length of dark segment
+     * @param {number} space Length of light segment
      */
     function drawDashedHorizontalLine(pdf, dx, dy, lenght, dash, space) {
         for (var x = 0; x < lenght; x = x + dash + space) {
@@ -74,6 +97,13 @@
         }
     }
 
+    /**
+     * Changes line color if necessary
+     * 
+     * @param {oblect} pdf jsPDF oblect
+     * @param {string} colorString color as hex string
+     * @param {ModelDescription} m model
+     */
     function setLineColor(pdf, colorString, m) {
         var re = /^#([a-fA-F0-9]{2})([a-fA-F0-9]{2})([a-fA-F0-9]{2})$/;
         if (colorString) {
@@ -91,6 +121,16 @@
         }
     }
 
+    /**
+     * Calculates coordinates clipped by min and max x 
+     * @param {type} x0 horizontal coordinate of line begin
+     * @param {type} y0 vertical coordinate of line begin
+     * @param {type} x1 horizontal coordinate of line end
+     * @param {type} y1 vertical coordinate of line end
+     * @param {type} minx horizontal coordinate of left clip line
+     * @param {type} maxx horizontal coordinate of right clip line
+     * @returns {number[]} x0, y0, x1, y1 of clipped line
+     */
     function verticalClipLine(x0, y0, x1, y1, minx, maxx) {
         var nx0, ny0, nx1, ny1, tmp, width, height;
         if (minx > maxx) {
@@ -128,6 +168,59 @@
         return [nx0, ny0, nx1, ny1];
     }
 
+    /**
+     * Draws slope lines on guideline according to specification.
+     * 
+     * @param {object} pdf PDF to draw on
+     * @param {ModelDescription} m model
+     * @param {number} dx x offset
+     * @param {number} dy x offset
+     * @param {number} width width of current column
+     * @param {AngleLine} angleLine angle line specification.
+     */
+    function drawAngleLine(pdf, m, dx, dy, width, angleLine) {
+        var slope, xoffset, i;
+        if (angleLine.lineWidth) {
+            pdf.setLineWidth(angleLine.lineWidth);
+        }
+        setLineColor(pdf, angleLine.color, m);
+        if (angleLine.toVertical) {
+            slope = m.data.linesProperties.height * Math.tan(m.slantLine.angle * Math.PI / 180.0);
+            if (m.slantLine.distanceType === 'parallel') {
+                xoffset = m.slantLine.distance / Math.cos(m.slantLine.angle * Math.PI / 180.0);
+            } else {
+                xoffset = m.slantLine.distance;
+            }
+        } else {
+            slope = m.data.linesProperties.height / Math.tan(angleLine.angle * Math.PI / 180.0);
+            if (angleLine.distanceType === 'parallel') {
+                xoffset = angleLine.distance / Math.sin(angleLine.angle * Math.PI / 180.0);
+            } else {
+                xoffset = angleLine.distance;
+            }
+        }
+        for (i = -Math.floor(Math.abs(slope / xoffset)); i * xoffset < width + Math.max(-slope, 0); i++) {
+            var t = verticalClipLine(dx + i * xoffset,
+                    dy - m.data.linesProperties.minHeight,
+                    dx + i * xoffset + slope,
+                    dy - m.data.linesProperties.maxHeight,
+                    dx, dx + width);
+            if (t) {
+                pdf.line(t[0], t[1], t[2], t[3]);
+            }
+        }
+    }
+
+    /**
+     * Draws single set of guide lines.
+     * 
+     * @param {object} pdf jsPDF object
+     * @param {ModelDescription} m model
+     * @param {number} dx horizontal offset (left edge)
+     * @param {number} dy vertical offset
+     * @param {number} width guide line width
+     * @param {boolean} skipFirst do not draw highest of lines
+     */
     function drawLines(pdf, m, dx, dy, width, skipFirst) {
         var slope, xoffset, i;
 
@@ -135,26 +228,7 @@
          * Draw nib angle lines.
          */
         if (m.nibAngleLine) {
-            if (m.nibAngleLine.lineWidth) {
-                pdf.setLineWidth(m.nibAngleLine.lineWidth);
-            }
-            setLineColor(pdf, m.nibAngleLine.color, m);
-            slope = m.data.linesProperties.height / Math.tan(m.nibAngleLine.angle * Math.PI / 180.0);
-            if (m.nibAngleLine.distanceType === 'parallel') {
-                xoffset = m.nibAngleLine.distance / Math.sin(m.nibAngleLine.angle * Math.PI / 180.0);
-            } else {
-                xoffset = m.nibAngleLine.distance;
-            }
-            for (i = -Math.floor(slope / xoffset); i * xoffset < width; i++) {
-                var l = verticalClipLine(dx + i * xoffset,
-                        dy - m.data.linesProperties.minHeight,
-                        dx + i * xoffset + slope,
-                        dy - m.data.linesProperties.maxHeight,
-                        dx, dx + width);
-                if (l) {
-                    pdf.line(l[0], l[1], l[2], l[3]);
-                }
-            }
+            drawAngleLine(pdf, m, dx, dy, width, m.nibAngleLine);
         }
 
         /*
@@ -180,29 +254,17 @@
          * Draw slant lines.
          */
         if (m.slantLine) {
-            if (m.slantLine.lineWidth) {
-                pdf.setLineWidth(m.slantLine.lineWidth);
-            }
-            setLineColor(pdf, m.slantLine.color, m);
-            slope = m.data.linesProperties.height * Math.tan(m.slantLine.angle * Math.PI / 180.0);
-            if (m.slantLine.distanceType === 'parallel') {
-                xoffset = m.slantLine.distance / Math.cos(m.slantLine.angle * Math.PI / 180.0);
-            } else {
-                xoffset = m.slantLine.distance;
-            }
-            for (i = -Math.floor(slope / xoffset); i * xoffset < width; i++) {
-                var t = verticalClipLine(dx + i * xoffset,
-                        dy - m.data.linesProperties.minHeight,
-                        dx + i * xoffset + slope,
-                        dy - m.data.linesProperties.maxHeight,
-                        dx, dx + width);
-                if (t) {
-                    pdf.line(t[0], t[1], t[2], t[3]);
-                }
-            }
+            drawAngleLine(pdf, m, dx, dy, width, m.slantLine);
         }
     }
 
+    /**
+     * Draws column of guide lines.
+     * 
+     * @param {object} pdf jsPDF object
+     * @param {ColumnDescription} column column to draw
+     * @param {ModelDescription} m model
+     */
     function drawColumn(pdf, column, m) {
         var columnHeight = column.bottom - column.top;
         var columnWidth = column.right - column.left;
@@ -220,11 +282,17 @@
         var skipFirst = (interLineSpace <= firstLineWidth * 1.1);
         for (var i = 0; i < numberOfLines; i++) {
             drawLines(pdf, m, column.left,
-                    column.top + i * (m.data.linesProperties.height + interLineSpace) + m.data.linesProperties.maxHeight, 
+                    column.top + i * (m.data.linesProperties.height + interLineSpace) + m.data.linesProperties.maxHeight,
                     columnWidth, skipFirst && i !== 0);
         }
     }
 
+    /**
+     * Creates jsPDF object and fills it according to model.
+     * 
+     * @param {ModelDescription} m
+     * @returns {jsPDF}
+     */
     function drawPage(m) {
         var pdf = new jsPDF(m.page.layout, 'mm', m.page.format);
         m.data.linesProperties = calculateLinesProperties(m.lineModel);
@@ -262,6 +330,7 @@
         if (v.slantGuide.enabled) {
             m.slantLine = {
                 angle: v.slantGuide.angle,
+                toVertical: true,
                 distance: v.slantGuide.distance * v.nibWidth,
                 distanceType: v.slantGuide.distanceType.value,
                 color: v.slantGuide.color || '#000000',
@@ -273,6 +342,7 @@
         if (v.nibAngleGuide.enabled) {
             m.nibAngleLine = {
                 angle: v.nibAngleGuide.angle,
+                toVertical: false,
                 distance: v.nibAngleGuide.distance * v.nibWidth,
                 distanceType: v.nibAngleGuide.distanceType.value,
                 color: v.nibAngleGuide.color || '#000000',
@@ -308,75 +378,6 @@
         $scope.Math = Math;
         $scope.model = {};
         $scope.model.pageModel = {
-//            page: {
-//                layout: 'portrait',
-//                format: 'a4'
-//
-//            },
-//            lineModel: [
-//                {
-//                    position: 10,
-//                    lineWidth: 0.3,
-//                    color: '#000000'
-//                },
-//                {
-//                    position: 7.5,
-//                    lineWidth: 0.2,
-//                    style: 'dashed',
-//                    color: '#000000'
-//                },
-//                {
-//                    position: 5,
-//                    lineWidth: 0.3,
-//                    color: '#000000'
-//                },
-//                {
-//                    position: 2.5,
-//                    lineWidth: 0.2,
-//                    style: 'dashed',
-//                    color: '#000000'
-//                },
-//                {
-//                    position: 0,
-//                    lineWidth: 0.5,
-//                    color: '#000000'
-//                },
-//                {
-//                    position: -2.5,
-//                    lineWidth: 0.2,
-//                    style: 'dashed',
-//                    color: '#000000'
-//                },
-//                {
-//                    position: -5,
-//                    lineWidth: 0.3,
-//                    color: '#000000'
-//                }
-//            ],
-//            slantLine: {
-//                angle: 5,
-//                lineWidth: 0.2,
-//                color: '#000000',
-//                distance: 2.5,
-//                distanceType: 'parallel'
-//            },
-//            nibAngleLine: {
-//                angle: 45,
-//                lineWidth: 0.2,
-//                color: '#FF0000',
-//                distance: 10,
-//                distanceType: 'parallel'
-//            },
-//            columns: [
-//                {
-//                    top: 12.5,
-//                    right: 197.5,
-//                    bottom: 284.5,
-//                    left: 12.5
-//                }
-//            ],
-//            data: {
-//            }
         };
 
         $scope.view = {
@@ -444,7 +445,7 @@
             $scope.view.page.leftMargin = 12.7;
             $scope.view.page.rightMargin = 12.7;
             $scope.view.page.columns = 1;
-            $scope.view.page.interColumn = 0;            
+            $scope.view.page.interColumn = 0;
         };
 
         $scope.twoColumnsNinths = function () {
@@ -562,12 +563,13 @@
         $scope.removeLine = function (line) {
             var idx = $scope.view.guideLines.indexOf(line);
             if (idx !== -1) {
-                $scope.view.guideLines.splice(idx,1);
+                $scope.view.guideLines.splice(idx, 1);
             }
         };
 
         $scope.draw = function () {
             $scope.model.pageModel = viewToModel($scope.view);
+            console.log($scope.model.pageModel);
             var doc = drawPage($scope.model.pageModel);
             $document.find("#pdfPreview").attr("src", doc.output('bloburi'));
         };
